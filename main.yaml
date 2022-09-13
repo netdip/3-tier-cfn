@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+    EnvironmentName:
+      Description: Environment name that is prefixed to resource names
+      Type: String
+
+    VpcCIDR:
+      Description: Please enter the IP range (CIDR) for this VPC
+      Type: String
+      Default: 192.167.0.0/16
+
+    PublicSubnet1CIDR:
+      Description: Please enter the IP range (CIDR) for the public subnet in the first Availability Zone
+      Type: String
+      Default: 192.167.0.0/24
+
+    PublicSubnet2CIDR:
+      Description: Please enter the IP range (CIDR) for the public subnet in the second Availability Zone
+      Type: String
+      Default: 192.167.1.0/24
+
+    PrivateSubnet1CIDR:
+      Description: Please enter the IP range (CIDR) for the private subnet in the first Availability Zone
+      Type: String
+      Default: 192.167.2.0/24
+
+    PrivateSubnet2CIDR:
+      Description: Please enter the IP range (CIDR) for the private subnet in the second Availability Zone
+      Type: String
+      Default: 192.167.3.0/24
+    
+    DomainName:
+      Description: Please enter your domain name
+      Type: String
+      Default: 'example.com'
+
+    HostedZoneId:
+      Description: Please enter your route53 domain hostedzone ID
+      Type: String
+      Default: ''
+    
+    DBInstanceClass:
+      Description: Mention the DB instance type.
+      Type: String
+      Default: 'db.t2.small'
+
+    MasterUsername:
+      Description: Mention the DB master username.
+      Type: String
+
+    MasterUserPassword: 
+      Description: Mention the DB DB master password.
+      Type: String
+    
+    DBName:
+      Description: Mention your DB name
+      Type: String
+      Default: 'mydb'
+
+    BastionInstanceType:
+      Description: Provide type of instance
+      Type: String
+      Default: 't2.micro'
+    
+    BastionImageId:
+      Description: Provide your custome AMI
+      Type: String
+      Default: 'ami-0c2ab3b8efb09f272'
+    
+    MyKeyPair:
+      Description: Provide keypair name
+      Type: String
+      Default: 'my-key'
+
+    SSHKey:
+      Description: Provide your system ssh public key to access EC2 instances
+      Type: String
+    
+    SSHLocation:
+      Description: Provide source IP to login over SSH (CIDR) eg. x.x.x.x/32
+      Type: String
+
+    ASGImageId:
+      Description: Provide your custome AMI
+      Type: String
+      Default: 'ami-0c2ab3b8efb09f272'
+
+    ASGInstanceType:
+      Description: Provide type of instance
+      Type: String
+      Default: 't2.micro'
+Resources:
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: modules/vpc.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        VpcCIDR: !Ref VpcCIDR
+        PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
+        PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
+        PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
+        PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
+        DomainName: !Ref DomainName
+        HostedZoneId: !Ref HostedZoneId
+
+  OtherCom:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: modules/other_com.yaml
+      Parameters:
+        VPC: !GetAtt VPC.Outputs.VPC
+        VpcCIDR: !Ref VpcCIDR        
+        PublicSubnet1: !GetAtt VPC.Outputs.PublicSubnet1
+        PublicSubnet2: !GetAtt VPC.Outputs.PublicSubnet2
+        PrivateSubnet1: !GetAtt VPC.Outputs.PrivateSubnet1
+        PrivateSubnet2: !GetAtt VPC.Outputs.PrivateSubnet2
+        DBSecurityGroup: !GetAtt VPC.Outputs.DBSecurityGroup
+        DBInstanceClass: !Ref DBInstanceClass
+        MasterUsername: !Ref MasterUsername
+        MasterUserPassword: !Ref MasterUserPassword
+        DBName: !Ref DBName
+        InstanceType: !Ref BastionInstanceType
+        ImageId: !Ref BastionImageId
+        MyKeyPair: !Ref MyKeyPair
+        SSHKey: !Ref SSHKey        
+        SSHLocation: !Ref SSHLocation
+
+  ASGInstances:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: modules/asg.yaml
+      Parameters:
+        PublicSubnet1: !GetAtt VPC.Outputs.PublicSubnet1
+        PublicSubnet2: !GetAtt VPC.Outputs.PublicSubnet2
+        PrivateSubnet1: !GetAtt VPC.Outputs.PrivateSubnet1
+        PrivateSubnet2: !GetAtt VPC.Outputs.PrivateSubnet2
+        ELBWebServerSecurityGroup: !GetAtt VPC.Outputs.ELBWebServerSecurityGroup
+        WebServerSecurityGroup: !GetAtt VPC.Outputs.WebServerSecurityGroup
+        ACMCertificate: !GetAtt VPC.Outputs.ACMCertificate
+        ImageId: !Ref ASGImageId
+        InstanceType: !Ref ASGInstanceType
+        KeyPair: !Ref MyKeyPair

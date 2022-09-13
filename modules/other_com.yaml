@@ -1,0 +1,153 @@
+Description:  This template deploys RDS,Bastion host and S3
+
+Parameters:
+  VPC:
+    Description: Mention your VPC ID.
+    Type: String
+
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR) for this VPC
+    Type: String
+    Default: 192.167.0.0/16
+  
+  PublicSubnet1:
+    Description: Please enter public subnet at AZ1
+    Type: String
+
+  PublicSubnet2:
+    Description: Please enter public subnet at AZ2
+    Type: String
+
+  PrivateSubnet1:
+    Description: The private subnet in the 1st Availability Zone
+    Type: String
+
+  PrivateSubnet2:
+    Description: The private subnet in the 2nd Availability Zone
+    Type: String
+
+  DBInstanceClass:
+    Description: Mention the DB instance type.
+    Type: String
+    Default: 'db.t2.small'
+  
+  MasterUsername:
+    Description: Mention the DB master username.
+    Type: String
+
+  MasterUserPassword: 
+    Description: Mention the DB DB master password.
+    Type: String
+  
+  DBName:
+    Description: Mention your DB name
+    Type: String
+    Default: 'mydb'
+
+  InstanceType:
+    Description: Provide type of instance
+    Type: String
+    Default: 't2.micro'
+  
+  ImageId:
+    Description: Provide your custome AMI
+    Type: String
+    Default: 'ami-0c2ab3b8efb09f272'
+  
+  MyKeyPair:
+    Description: Provide keypair name
+    Type: String
+    Default: 'my-key'
+
+  SSHKey:
+    Description: Provide your system ssh public key to access EC2 instances
+    Type: String
+  
+  SSHLocation:
+    Description: Provide source IP to login over SSH (CIDR) eg. x.x.x.x/32
+    Type: String
+
+  DBSecurityGroup:
+    Description: Please enter DB security group ID
+    Type: String
+
+
+Resources:
+  ImportedKeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: !Ref MyKeyPair
+      PublicKeyMaterial: !Ref SSHKey
+
+  DBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: This is DB subnet group
+      SubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+  DB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: !Ref DBName
+      VPCSecurityGroups: 
+      - !Ref DBSecurityGroup
+      AllocatedStorage: '5'
+      DBInstanceIdentifier: !Ref DBName
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: MySQL
+      MultiAZ: Yes
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+    DeletionPolicy: Snapshot
+  
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketName: frndbucket
+    
+  BastionInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref ImportedKeyPair
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref BastionSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-BastionInstance'
+      UserData:
+          Fn::Base64: |
+            #!/bin/bash -xe
+   
+            yum update -y
+            yum install https://dev.mysql.com/get/mysql80-community-release-el7-5.noarch.rpm -y
+            yum install mysql-community-client -y
+
+  BastionSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Enable SSH access via port 22 for bastion host
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: '22'
+            ToPort: '22'
+            CidrIp: !Ref SSHLocation
+        VpcId: !Ref VPC
+
+Outputs:
+  BastionInstance:
+    Description: Bastion host public IP 
+    Value: !GetAtt BastionInstance.PublicDnsName
+  
+  DBEndpoint:
+    Description: Database endpoint  
+    Value: !GetAtt DB.Endpoint.Address
+
+  KeyPair:
+    Description: Keypair used in EC2 instances  
+    Value: !Ref ImportedKeyPair

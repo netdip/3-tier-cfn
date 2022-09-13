@@ -1,0 +1,150 @@
+Description:  This template deploys autoscalling group with two EC2 instances and loadbalancer.
+
+Parameters:
+  PublicSubnet1:
+    Description: Please enter public subnet at AZ1
+    Type: String
+
+  PublicSubnet2:
+    Description: Please enter public subnet at AZ2
+    Type: String
+  
+  PrivateSubnet1:
+    Description: The private subnet in the 1st Availability Zone
+    Type: String
+
+  PrivateSubnet2:
+    Description: The private subnet in the 2nd Availability Zone
+    Type: String
+  
+  ELBWebServerSecurityGroup:
+    Description: Please enter ELB security group ID
+    Type: String
+  
+  WebServerSecurityGroup:
+    Description: Please enter EC2 security group ID
+    Type: String
+
+  ACMCertificate:
+    Description: The SSL certificate
+    Type: String
+  
+  ImageId:
+    Description: Provide your custome AMI
+    Type: String
+    Default: 'ami-0c2ab3b8efb09f272'
+
+  InstanceType:
+    Description: Provide type of instance
+    Type: String
+    Default: 't2.micro'
+  
+  KeyPair:
+    Description: Provide keypair name
+    Type: String
+
+Resources:  
+  CustomerManagedPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles: 
+        - !Ref InstanceRole
+      PolicyName: CustomerManagedPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - s3:GetObject
+          - s3:PutObject
+          - s3:PutObjectAcl
+          Resource: arn:aws:s3:::frndbucket/*
+  
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: InstanceRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: 'Allow'
+          Principal:
+            Service:
+            - 'ec2.amazonaws.com'
+          Action:
+          - 'sts:AssumeRole'
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: '/'
+      Roles:
+      - !Ref InstanceRole
+
+  AsgLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${AWS::StackName}-launch-template
+      LaunchTemplateData:
+        CreditSpecification:
+          CpuCredits: Unlimited
+        ImageId: !Ref ImageId
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile:
+          Name: !Ref InstanceProfile
+        KeyName: !Ref KeyPair
+        Monitoring:
+          Enabled: True
+        SecurityGroupIds:
+          - !Ref WebServerSecurityGroup
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash -xe
+   
+            yum update -y
+            yum install -y httpd
+            echo "Welcome from the instance $(hostname -f)" > /var/www/html/index.html
+            service httpd start
+  ApplicationAsg:
+      Type: AWS::AutoScaling::AutoScalingGroup
+      Properties:
+        AutoScalingGroupName: ApplicationAsg
+        MinSize: '1'
+        MaxSize: '5'
+        DesiredCapacity: '2'
+        HealthCheckGracePeriod: 300
+        LaunchTemplate:
+          LaunchTemplateId: !Ref AsgLaunchTemplate
+          Version: !GetAtt AsgLaunchTemplate.LatestVersionNumber
+        VPCZoneIdentifier:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+        LoadBalancerNames:
+          - !Ref LoadBalancer
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      CrossZone: 'true'
+      Listeners:
+        - LoadBalancerPort: '443'
+          InstancePort: '80'
+          InstanceProtocol: HTTP
+          Protocol: HTTPS
+          SSLCertificateId: !Ref ACMCertificate
+      HealthCheck:
+        Target: HTTP:80/
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '5'
+        Interval: '30'
+        Timeout: '5'
+      SecurityGroups:
+        - !Ref ELBWebServerSecurityGroup    
+
+Outputs:
+  LoadBalancer:
+    Description: It will provide your loadbalancer DNS name 
+    Value: !GetAtt LoadBalancer.DNSName

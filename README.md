@@ -1,4 +1,4 @@
-# Secure Three-Tier Architecture in AWS (CloudFormation)
+# Secure Three-Tier Architecture in AWS with AZ (CloudFormation)
 
 A three-tier architecture is a software architecture pattern where the application is broken down into three logical tiers: the presentation layer, the business logic layer and the data storage layer. Each of these layers or tiers does a specific task and can be managed independently of each other. This a shift from the monolithic way of building an application where the Loadbalancer in public subnet, the backend and the database are both sitting in private subnet. All private subnet resources can be manageable via bastion host for operation purpose.
 
@@ -12,8 +12,8 @@ Various cloudformation stacks used here to provision infrastructure automaticall
 
 ## Prerequisite
 
-1. You must have AWSCli installed and configured in your system. See [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-2. You should have the permission to create resources like
+1. You must have AWSCli installed and configured in your system. See [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+2. You should have the permission to create resources like.
    * IAM Policy
    * IAM Role
    * S3 Bucket
@@ -35,7 +35,7 @@ To provision this infrastructure follow the steps given below.
 ``` bash
 $ ./deploy.sh
 ```
-2. Now you have to provide few inputs
+2. Now you have to provide few inputs.
 
 ```bash
 $ ./deploy.sh
@@ -62,9 +62,12 @@ Deployment will be start shortly.
 
 Waiting for changeset to be created..
 Waiting for stack create/update to complete
-
+Successfully created/updated stack - frndcode
 ```
+## To get the endpoints
+
+Login to AWS console and check the cloudformation stack. Find the stack (VPC and OtherCom) and check the output section.  
 
 ## TODO
 
-* Some parmeters are in default. Need to modify the stack as user inputs
+* Some parmeters are in default. Need to modify the stack as user inputs.

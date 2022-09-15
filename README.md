@@ -42,7 +42,7 @@ $ ./deploy.sh
 Enter your S3 bucket name to upload packages : codefrnd
 Enter your region where you want to spinup infrastructure : us-west-2
 Enter your environment name : codefrnd
-Enter your domain name : tmbmarble.com
+Enter your domain name : example.com
 Enter your route53 domain hosted zone ID : XXXXXXXXX
 Enter your DB user name : admin
 Enter your DB password : (Hidden text)

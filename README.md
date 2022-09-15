@@ -28,7 +28,7 @@ Various cloudformation stacks used here to provision infrastructure automaticall
 
 ## How to provision this infrastructure
 
-To provion this infrastructure follow the steps given below.
+To provision this infrastructure follow the steps given below.
 
 1. Run the deploy.sh file.
 
@@ -49,3 +49,22 @@ Enter your DB password : (Hidden text)
 Enter your IP from which you wish to connect bastion host : (Your IP from where you want to SSH to bastion host)
 Enter your ssh key : ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDL5WkRAolo5CPJz7OMvQXXXXXXXXXXXXXXXX
 ```
+## Output
+
+```bash
+{
+    "Location": "http://codefrnd.s3.amazonaws.com/"
+}
+Successfully packaged artifacts and wrote output template to file packaged.yaml.
+Execute the following command to deploy the packaged template
+aws cloudformation deploy --template-file /path/to/3-tier-cfn/packaged.yaml --stack-name <YOUR STACK NAME>
+Deployment will be start shortly.
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+
+```
+
+## TODO
+
+* Some parmeters are in default. Need to modify based on user inputs

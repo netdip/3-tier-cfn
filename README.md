@@ -67,4 +67,4 @@ Waiting for stack create/update to complete
 
 ## TODO
 
-* Some parmeters are in default. Need to modify based on user inputs
+* Some parmeters are in default. Need to modify the stack as user inputs
